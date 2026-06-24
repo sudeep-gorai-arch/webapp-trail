@@ -1,18 +1,13 @@
 import axios from "axios";
 
-
 const API = axios.create({
-
   baseURL:
     process.env.NEXT_PUBLIC_API_URL ||
     "https://backend-trail-6u5m.onrender.com/api",
 
-  timeout: 10000,
-
+  // 2 minutes, because batch image upload can take time on Render + R2
+  timeout: 120000,
 });
-
-
-
 
 // ==============================
 // REQUEST INTERCEPTOR
@@ -20,126 +15,45 @@ const API = axios.create({
 // ==============================
 
 API.interceptors.request.use(
-
   (config) => {
-
-
-    if (
-      typeof window !== "undefined"
-    ) {
-
-
-      const token =
-        localStorage.getItem(
-          "token"
-        );
-
-
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
 
       if (token) {
-
-
-        config.headers.Authorization =
-          `Bearer ${token}`;
-
-
+        config.headers.Authorization = `Bearer ${token}`;
       }
-
-
     }
 
-
-
     return config;
-
-
   },
-
-
   (error) => {
-
     return Promise.reject(error);
-
-  }
-
-
+  },
 );
-
-
-
-
-
-
 
 // ==============================
 // RESPONSE INTERCEPTOR
 // Auto logout invalid session
 // ==============================
 
-
 API.interceptors.response.use(
-
-
-  (response) =>
-    response,
-
-
+  (response) => response,
 
   (error) => {
-
-
     if (
-
       error.response?.status === 401 &&
-
       typeof window !== "undefined"
-
     ) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-
-
-      localStorage.removeItem(
-        "token"
-      );
-
-
-
-      localStorage.removeItem(
-        "user"
-      );
-
-
-
-
-      /**
-       * avoid redirect loop
-       */
-      if (
-        window.location.pathname !== "/login"
-      ) {
-
-
-        window.location.href =
-          "/login";
-
-
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
       }
-
-
-
     }
 
-
-
     return Promise.reject(error);
-
-
-  }
-
-
+  },
 );
-
-
-
 
 export default API;

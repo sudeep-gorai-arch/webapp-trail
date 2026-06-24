@@ -217,7 +217,9 @@ export const createWallpaper = (
     return API
         .post(
             "/wallpapers",
-            formData
+            formData, {
+            timeout: 120000,
+        }
         )
         .then(
             r => r.data
@@ -333,7 +335,9 @@ export const uploadWallpapers = (
     return API
         .post(
             "/wallpapers/batch",
-            formData
+            formData, {
+            timeout: 120000,
+        }
         )
         .then(
             r => r.data
