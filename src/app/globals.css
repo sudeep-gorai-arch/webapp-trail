@@ -1,0 +1,323 @@
+@import "tailwindcss";
+
+/* ======================
+   THEMES
+====================== */
+
+/* DEFAULT LIGHT */
+
+:root {
+  --bg-main: #f8fafc;
+
+  --text-main: #0f172a;
+  --text-muted: #475569;
+
+  --glass-start: rgba(255, 255, 255, 0.85);
+  --glass-end: rgba(255, 255, 255, 0.55);
+
+  --primary: #2563eb;
+  --secondary: #9333ea;
+  --accent: #db2777;
+
+  --scroll-bg: #e5e7eb;
+}
+
+/* DARK */
+
+[data-theme="dark"] {
+  --bg-main: #050510;
+
+  --text-main: #ffffff;
+
+  --text-muted: #d1d5db;
+
+  --glass-start: rgba(255, 255, 255, 0.14);
+
+  --glass-end: rgba(255, 255, 255, 0.04);
+
+  --primary: #3b82f6;
+
+  --secondary: #9333ea;
+
+  --accent: #ec4899;
+
+  --scroll-bg: #050510;
+}
+
+/* PURPLE */
+
+[data-theme="purple"] {
+  --bg-main: #16001e;
+
+  --text-main: white;
+
+  --glass-start: rgba(168, 85, 247, 0.25);
+
+  --glass-end: rgba(236, 72, 153, 0.1);
+
+  --primary: #a855f7;
+
+  --secondary: #ec4899;
+
+  --accent: #f0abfc;
+
+  --scroll-bg: #16001e;
+}
+
+/* OCEAN */
+
+[data-theme="ocean"] {
+  --bg-main: #001f3f;
+
+  --text-main: white;
+
+  --glass-start: rgba(6, 182, 212, 0.25);
+
+  --glass-end: rgba(59, 130, 246, 0.08);
+
+  --primary: #06b6d4;
+
+  --secondary: #3b82f6;
+
+  --accent: #22d3ee;
+
+  --scroll-bg: #001f3f;
+}
+
+/* EMERALD */
+
+[data-theme="emerald"] {
+  --bg-main: #001f12;
+
+  --text-main: white;
+
+  --glass-start: rgba(16, 185, 129, 0.25);
+
+  --glass-end: rgba(132, 204, 22, 0.08);
+
+  --primary: #10b981;
+
+  --secondary: #84cc16;
+
+  --accent: #34d399;
+
+  --scroll-bg: #001f12;
+}
+
+/* SUNSET */
+
+[data-theme="sunset"] {
+  --bg-main: #2b0900;
+
+  --text-main: white;
+
+  --glass-start: rgba(249, 115, 22, 0.3);
+
+  --glass-end: rgba(239, 68, 68, 0.1);
+
+  --primary: #f97316;
+
+  --secondary: #ef4444;
+
+  --accent: #facc15;
+
+  --scroll-bg: #2b0900;
+}
+
+.theme-text {
+  color: var(--text-main);
+}
+
+.theme-muted {
+  color: var(--text-muted);
+}
+
+.theme-gradient {
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    var(--secondary),
+    var(--accent)
+  );
+
+  -webkit-background-clip: text;
+
+  color: transparent;
+}
+
+/* ======================
+   RESET
+====================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+
+  color: var(--text-main);
+
+  overflow-x: hidden;
+
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+
+      color-mix(in srgb, var(--secondary) 35%, transparent),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 90% 20%,
+
+      color-mix(in srgb, var(--primary) 25%, transparent),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at 50% 100%,
+
+      color-mix(in srgb, var(--accent) 18%, transparent),
+      transparent 30%
+    ),
+    var(--bg-main);
+
+  transition: 0.4s ease;
+}
+
+/* ======================
+   GLASS EFFECT
+====================== */
+
+.glass {
+  background: linear-gradient(135deg, var(--glass-start), var(--glass-end));
+
+  backdrop-filter: blur(24px);
+
+  -webkit-backdrop-filter: blur(24px);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ======================
+   GRADIENT TEXT
+====================== */
+
+.gradient-text {
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    var(--secondary),
+    var(--accent),
+    var(--primary)
+  );
+
+  background-size: 300%;
+
+  -webkit-background-clip: text;
+
+  background-clip: text;
+
+  color: transparent;
+
+  animation: gradientMove 6s linear infinite;
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0%;
+  }
+
+  100% {
+    background-position: 300%;
+  }
+}
+
+/* ======================
+   THEME MENU BUTTON
+====================== */
+
+.theme-item {
+  width: 100%;
+
+  padding: 12px 16px;
+
+  border-radius: 14px;
+
+  text-align: left;
+
+  transition: 0.2s;
+}
+
+.theme-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ======================
+   HIDE SCROLLBAR
+====================== */
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+
+  scrollbar-width: none;
+}
+
+/* ======================
+   PAGE SCROLLBAR
+====================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scroll-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--primary), var(--secondary));
+
+  border-radius: 20px;
+}
+
+/* ======================
+   SELECTION
+====================== */
+
+::selection {
+  background: var(--secondary);
+
+  color: white;
+}
+
+/* ======================
+   IMAGES
+====================== */
+
+img {
+  user-select: none;
+
+  -webkit-user-drag: none;
+}
+
+/* ======================
+   SMOOTH CARDS
+====================== */
+
+.card-hover {
+  transition: all 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-10px) scale(1.02);
+}
