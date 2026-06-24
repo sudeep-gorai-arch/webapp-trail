@@ -8,6 +8,8 @@ import { FiX, FiSave, FiSearch } from "react-icons/fi";
 
 import * as Icons from "react-icons/io5";
 
+import type { IconType } from "react-icons";
+
 // ==============================
 // DYNAMIC ICON LIST
 // ==============================
@@ -23,20 +25,15 @@ const iconList = Object.entries(Icons)
 
     return {
       name,
-
       value,
-
-      Icon: Icon as React.ComponentType,
+      Icon: Icon as IconType,
     };
   });
 
 export default function CategoryModal({
   open,
-
   onClose,
-
   data,
-
   onSave,
 }: any) {
   const [iconSearch, setIconSearch] = useState("");
@@ -144,9 +141,7 @@ export default function CategoryModal({
           enableReinitialize
           initialValues={{
             name: data?.name || "",
-
             slug: data?.slug || "",
-
             icon: data?.icon || "",
           }}
           onSubmit={async (values) => {
@@ -155,9 +150,7 @@ export default function CategoryModal({
         >
           {({
             setFieldValue,
-
             isSubmitting,
-
             values,
           }) => (
             <Form className="space-y-5">
@@ -194,7 +187,6 @@ export default function CategoryModal({
 
                     setFieldValue(
                       "slug",
-
                       value.toLowerCase().trim().replaceAll(" ", "-"),
                     );
                   }}

@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
       // Local development
       {
         protocol: "http",
-        hostname: "192.168.1.12",
+        hostname: "192.168.1.6",
         port: "5000",
         pathname: "/uploads/**",
       },
