@@ -5,7 +5,7 @@ const API = axios.create({
 
   baseURL:
     process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:5000/api",
+    "https://backend-trail-6u5m.onrender.com/api",
 
   timeout: 10000,
 
