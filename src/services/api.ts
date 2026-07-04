@@ -3,7 +3,7 @@ import axios from "axios";
 const API = axios.create({
     baseURL:
         process.env.NEXT_PUBLIC_API_URL ||
-        "http://192.168.1.6:5000/api",
+        "https://flexiwalls.onrender.com/api",
 
     timeout: 30000,
 });
