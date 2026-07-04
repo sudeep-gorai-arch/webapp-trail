@@ -1,39 +1,58 @@
-import API from './api';
+import API from "./api";
 
 import {
     AuthRequest,
-    AuthResponse
-} from '@/types/auth';
+    AuthResponse,
+} from "@/types/auth";
 
-import { ApiResponse } from '@/types/wallpaper';
+import { ApiResponse } from "@/types/wallpaper";
 
+// ==============================
+// LOGIN
+// ==============================
 
-export const register = (data: AuthRequest) =>
+export const login = async (data: AuthRequest) => {
+    const response = await API.post<ApiResponse<AuthResponse>>(
+        "/auth/login",
+        data
+    );
 
-    API
-        .post<ApiResponse<AuthResponse>>(
-            '/auth/register',
-            data
-        )
-        .then(r => r.data);
+    return response.data;
+};
 
+// ==============================
+// REGISTER (Optional)
+// ==============================
 
-export const login = (data: AuthRequest) =>
+export const register = async (data: AuthRequest) => {
+    const response = await API.post<ApiResponse<AuthResponse>>(
+        "/auth/register",
+        data
+    );
 
-    API
-        .post<ApiResponse<AuthResponse>>(
-            '/auth/login',
-            data
-        )
-        .then(r => r.data);
+    return response.data;
+};
 
+// ==============================
+// LOGOUT
+// ==============================
 
-export const logout = () =>
+export const logout = async () => {
+    const response = await API.post<ApiResponse<null>>(
+        "/auth/logout"
+    );
 
-    API
-        .post<ApiResponse<{
-            success: boolean
-        }>>(
-            '/auth/logout'
-        )
-        .then(r => r.data);
+    return response.data;
+};
+
+// ==============================
+// CURRENT USER
+// ==============================
+
+export const getMe = async () => {
+    const response = await API.get(
+        "/users/me"
+    );
+
+    return response.data;
+};

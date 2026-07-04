@@ -1,315 +1,363 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { FiEdit, FiPlus, FiSearch } from "react-icons/fi";
+import Image from "next/image";
+
+import {
+    FiEdit,
+    FiPlus,
+    FiSearch,
+    FiTrash,
+    FiPower,
+} from "react-icons/fi";
 
 import CategoryModal from "@/components/admin/CategoryModal";
 
 import {
-  getCategories,
-  createCategory,
-  updateCategory,
+    getCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    toggleCategory,
 } from "@/services/categoryService";
 
 import { Category } from "@/types/category";
 
-import * as Icons from "react-icons/io5";
-
 export default function Page() {
-  const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(false);
 
-  const [edit, setEdit] = useState<any>(null);
+    const [edit, setEdit] = useState<Category | null>(null);
 
-  const [search, setSearch] = useState("");
+    const [search, setSearch] = useState("");
 
-  const [page, setPage] = useState(1);
+    const [page, setPage] = useState(1);
 
-  const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-  const [categories, setCategories] = useState<Category[]>([]);
+    const [saving, setSaving] = useState(false);
 
-  const perPage = 5;
+    const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
+    const [categories, setCategories] = useState<Category[]>([]);
 
-  async function loadCategories() {
-    try {
-      setLoading(true);
+    const perPage = 5;
 
-      const res = await getCategories();
+    useEffect(() => {
+        loadCategories();
+    }, []);
 
-      setCategories(res.data || []);
-    } catch (error) {
-      console.log("CATEGORY ERROR", error);
-    } finally {
-      setLoading(false);
+    async function loadCategories() {
+        try {
+            setLoading(true);
+            setError("");
+
+            const res = await getCategories({ limit: 100, offset: 0 });
+
+            setCategories(res.data || []);
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Unable to load categories");
+        } finally {
+            setLoading(false);
+        }
     }
-  }
 
-  async function saveCategory(value: any) {
-    try {
-      if (edit) {
-        await updateCategory(edit.id, value);
-      } else {
-        await createCategory(value);
-      }
+    async function saveCategory(value: FormData) {
+        try {
+            setSaving(true);
+            setError("");
 
-      setOpen(false);
+            if (edit) {
+                await updateCategory(edit.slug, value);
+            } else {
+                await createCategory(value);
+            }
 
-      setEdit(null);
-
-      await loadCategories();
-    } catch (error) {
-      console.log("SAVE CATEGORY ERROR", error);
-    }
-  }
-
-  const filteredList = categories.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  const totalPages = Math.max(1, Math.ceil(filteredList.length / perPage));
-
-  const list = filteredList.slice(
-    (page - 1) * perPage,
-
-    page * perPage,
-  );
-
-  function convertIconName(icon?: string | null) {
-    if (!icon) return "";
-
-    return (
-      "Io" +
-      icon
-        .split("-")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join("")
-    );
-  }
-
-  return (
-    <div className="theme-text">
-      {/* HEADER */}
-
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-black gradient-text">Categories</h1>
-
-          <p className="theme-muted">Manage wallpaper categories</p>
-        </div>
-
-        <button
-          onClick={() => {
+            setOpen(false);
             setEdit(null);
 
-            setOpen(true);
-          }}
-          className="
-px-6
-py-3
-rounded-full
-flex
-gap-2
-items-center
-font-bold
-hover:scale-105
-transition
-"
-          style={{
-            background:
-              "linear-gradient(90deg,var(--primary),var(--secondary))",
+            await loadCategories();
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Unable to save category");
+        } finally {
+            setSaving(false);
+        }
+    }
 
-            color: "white",
-          }}
-        >
-          <FiPlus />
-          Add Category
-        </button>
-      </div>
+    async function handleToggle(category: Category) {
+        try {
+            setError("");
+            await toggleCategory(category.slug);
+            await loadCategories();
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Unable to update category status");
+        }
+    }
 
-      {/* SEARCH */}
+    async function handleDelete(category: Category) {
+        const confirmed = window.confirm(
+            `Delete category "${category.name}"? This can also remove wallpapers connected to it on the backend.`,
+        );
 
-      <div
-        className="
-glass
-rounded-[30px]
-p-5
-mb-8
-flex
-items-center
-gap-3
-"
-      >
-        <FiSearch className="theme-muted" />
+        if (!confirmed) return;
 
-        <input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+        try {
+            setError("");
+            await deleteCategory(category.slug);
+            await loadCategories();
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Unable to delete category");
+        }
+    }
 
-            setPage(1);
-          }}
-          placeholder="Search category..."
-          className="
-bg-transparent
-outline-none
-theme-text
-w-full
-"
-        />
-      </div>
+    const filteredList = useMemo(
+        () =>
+            categories.filter((item) =>
+                [item.name, item.slug, item.description]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase()
+                    .includes(search.toLowerCase()),
+            ),
+        [categories, search],
+    );
 
-      {/* TABLE */}
+    const totalPages = Math.max(1, Math.ceil(filteredList.length / perPage));
 
-      <div
-        className="
-glass
-rounded-[35px]
-overflow-hidden
-"
-      >
-        <table className="w-full">
-          <thead>
-            <tr className="theme-muted text-left">
-              <th className="p-5">Icon</th>
+    const list = filteredList.slice(
+        (page - 1) * perPage,
+        page * perPage,
+    );
 
-              <th>Name</th>
+    return (
+        <div className="theme-text">
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <h1 className="text-4xl font-black gradient-text">Categories</h1>
 
-              <th>Slug</th>
+                    <p className="theme-muted">
+                        Manage categories using the backend /api/categories endpoints
+                    </p>
+                </div>
 
-              <th>Wallpapers</th>
-
-              <th>Created</th>
-
-              <th>Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td className="p-10">Loading...</td>
-              </tr>
-            ) : (
-              list.map((category) => {
-                const Icon = (Icons as any)[convertIconName(category.icon)];
-
-                return (
-                  <tr
-                    key={category.id}
-                    style={{
-                      borderTop:
-                        "1px solid color-mix(in srgb,var(--text-main) 10%,transparent)",
+                <button
+                    disabled={saving}
+                    onClick={() => {
+                        setEdit(null);
+                        setOpen(true);
                     }}
-                  >
-                    <td className="p-5 text-3xl">{Icon ? <Icon /> : "✨"}</td>
+                    className="
+                    px-6
+                    py-3
+                    rounded-full
+                    flex
+                    gap-2
+                    items-center
+                    font-bold
+                    hover:scale-105
+                    transition
+                    disabled:opacity-60
+                    "
+                    style={{
+                        background:
+                            "linear-gradient(90deg,var(--primary),var(--secondary))",
+                        color: "white",
+                    }}
+                >
+                    <FiPlus />
+                    Add Category
+                </button>
+            </div>
 
-                    <td className="font-bold">{category.name}</td>
-
-                    <td className="theme-muted">{category.slug}</td>
-
-                    <td>{category.count ?? 0}</td>
-
-                    <td className="theme-muted">
-                      {new Date(category.createdAt).toLocaleDateString()}
-                    </td>
-
-                    <td>
-                      <button
-                        onClick={() => {
-                          setEdit(category);
-
-                          setOpen(true);
-                        }}
-                        className="
-glass
-w-10
-h-10
-rounded-full
-flex
-items-center
-justify-center
-hover:scale-110
-transition
-"
-                      >
-                        <FiEdit />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+            {error && (
+                <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-300">
+                    {error}
+                </div>
             )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* PAGINATION */}
+            <div
+                className="
+                glass
+                rounded-[30px]
+                p-5
+                mb-8
+                flex
+                items-center
+                gap-3
+                "
+            >
+                <FiSearch className="theme-muted" />
 
-      <div
-        className="
-glass
-rounded-[25px]
-p-5
-mt-8
-flex
-justify-between
-items-center
-"
-      >
-        <div className="theme-muted">
-          Total
-          <span className="theme-text font-bold mx-2">
-            {filteredList.length}
-          </span>
-          categories
+                <input
+                    value={search}
+                    onChange={(event) => {
+                        setSearch(event.target.value);
+                        setPage(1);
+                    }}
+                    placeholder="Search category..."
+                    className="bg-transparent outline-none theme-text w-full"
+                />
+            </div>
+
+            <div className="glass rounded-[35px] overflow-hidden">
+                <table className="w-full">
+                    <thead>
+                        <tr className="theme-muted text-left">
+                            <th className="p-5">Thumbnail</th>
+                            <th>Name</th>
+                            <th>Slug</th>
+                            <th>Wallpapers</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th className="text-right pr-5">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td className="p-10" colSpan={7}>
+                                    Loading...
+                                </td>
+                            </tr>
+                        ) : list.length === 0 ? (
+                            <tr>
+                                <td className="p-10 theme-muted" colSpan={7}>
+                                    No categories found.
+                                </td>
+                            </tr>
+                        ) : (
+                            list.map((category) => (
+                                <tr
+                                    key={category.id}
+                                    style={{
+                                        borderTop:
+                                            "1px solid color-mix(in srgb,var(--text-main) 10%,transparent)",
+                                    }}
+                                >
+                                    <td className="p-5">
+                                        {category.thumbnailUrl ? (
+                                            <Image
+                                                src={category.thumbnailUrl}
+                                                alt={category.name}
+                                                width={86}
+                                                height={58}
+                                                className="h-14 w-24 rounded-xl object-cover"
+                                            />
+                                        ) : (
+                                            <div className="glass flex h-14 w-24 items-center justify-center rounded-xl">
+                                                ✨
+                                            </div>
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        <div className="font-bold">{category.name}</div>
+                                        {category.description && (
+                                            <div className="theme-muted max-w-[280px] truncate text-sm">
+                                                {category.description}
+                                            </div>
+                                        )}
+                                    </td>
+
+                                    <td className="theme-muted">{category.slug}</td>
+
+                                    <td>{category.wallpaperCount ?? category.count ?? 0}</td>
+
+                                    <td>
+                                        <span
+                                            className={`rounded-full px-4 py-2 text-sm font-bold ${
+                                                category.active
+                                                    ? "bg-green-500/15 text-green-300"
+                                                    : "bg-red-500/15 text-red-300"
+                                            }`}
+                                        >
+                                            {category.active ? "Active" : "Inactive"}
+                                        </span>
+                                    </td>
+
+                                    <td className="theme-muted">
+                                        {new Date(category.createdAt).toLocaleDateString()}
+                                    </td>
+
+                                    <td>
+                                        <div className="flex justify-end gap-3 pr-5">
+                                            <button
+                                                title="Edit"
+                                                onClick={() => {
+                                                    setEdit(category);
+                                                    setOpen(true);
+                                                }}
+                                                className="glass w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition"
+                                            >
+                                                <FiEdit />
+                                            </button>
+
+                                            <button
+                                                title={category.active ? "Deactivate" : "Activate"}
+                                                onClick={() => handleToggle(category)}
+                                                className="glass w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition"
+                                            >
+                                                <FiPower />
+                                            </button>
+
+                                            <button
+                                                title="Delete"
+                                                onClick={() => handleDelete(category)}
+                                                className="glass w-10 h-10 rounded-full flex items-center justify-center text-red-400 hover:scale-110 transition"
+                                            >
+                                                <FiTrash />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="glass rounded-[25px] p-5 mt-8 flex justify-between items-center">
+                <div className="theme-muted">
+                    Total
+                    <span className="theme-text font-bold mx-2">
+                        {filteredList.length}
+                    </span>
+                    categories
+                </div>
+
+                <div className="flex gap-3">
+                    <button
+                        disabled={page === 1}
+                        onClick={() => setPage((current) => current - 1)}
+                        className="glass px-5 py-2 rounded-full disabled:opacity-40"
+                    >
+                        ← Previous
+                    </button>
+
+                    <span className="px-5 py-2">
+                        {page}/{totalPages}
+                    </span>
+
+                    <button
+                        disabled={page === totalPages}
+                        onClick={() => setPage((current) => current + 1)}
+                        className="glass px-5 py-2 rounded-full disabled:opacity-40"
+                    >
+                        Next →
+                    </button>
+                </div>
+            </div>
+
+            <CategoryModal
+                open={open}
+                data={edit}
+                onClose={() => {
+                    setOpen(false);
+                    setEdit(null);
+                }}
+                onSave={saveCategory}
+            />
         </div>
-
-        <div className="flex gap-3">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="
-glass
-px-5
-py-2
-rounded-full
-disabled:opacity-40
-"
-          >
-            ← Previous
-          </button>
-
-          <span className="px-5 py-2">
-            {page}/{totalPages}
-          </span>
-
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="
-glass
-px-5
-py-2
-rounded-full
-disabled:opacity-40
-"
-          >
-            Next →
-          </button>
-        </div>
-      </div>
-
-      <CategoryModal
-        open={open}
-        data={edit}
-        onClose={() => setOpen(false)}
-        onSave={saveCategory}
-      />
-    </div>
-  );
+    );
 }

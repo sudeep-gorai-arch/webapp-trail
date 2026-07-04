@@ -1,19 +1,35 @@
 // ================= CATEGORY =================
 
 export interface Category {
-
     id: string;
 
     name: string;
 
     slug: string;
 
-    icon: string | null;
+    icon?: string | null;
 
-    count: number;
+    description?: string | null;
 
-    createdAt: string;
+    folderName?: string | null;
+
+    coverImage?: string | null;
 
     imageUrl?: string | null;
 
+    thumbnailUrl?: string | null;
+
+    active?: boolean;
+
+    sortOrder?: number;
+
+    order?: number;
+
+    wallpaperCount?: number;
+
+    count?: number;
+
+    createdAt: string;
+
+    updatedAt?: string;
 }

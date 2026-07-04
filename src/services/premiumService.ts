@@ -1,5 +1,13 @@
+import { User } from "@/types/user";
+import { Wallpaper } from "@/types/wallpaper";
 
-export const canDownloadPremium=(user:any,wallpaper:any)=>{
- if(!wallpaper.isPremium) return true;
- return user?.isPremium===true;
-}
+export const canDownloadPremium = (
+    user: User | null | undefined,
+    wallpaper: Wallpaper | null | undefined
+) => {
+    if (!wallpaper) return false;
+
+    if (!wallpaper.isPremium) return true;
+
+    return user?.isPremium === true;
+};

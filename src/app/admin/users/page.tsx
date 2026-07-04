@@ -3,77 +3,103 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { userService, User } from "@/services/userService";
-import { Trash2 } from "lucide-react";
+import { FiInfo } from "react-icons/fi";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+    useEffect(() => {
+        loadUsers();
+    }, []);
 
-  const loadUsers = async () => {
-    const data = await userService.list();
+    const loadUsers = async () => {
+        try {
+            setLoading(true);
+            setError("");
 
-    setUsers(data);
-  };
+            const data = await userService.list();
 
-  const deleteUser = async (id: string) => {
-    if (!confirm("Delete user?")) return;
+            setUsers(data);
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Unable to load user information");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    await userService.remove(id);
+    return (
+        <div className="theme-text">
+            <div className="mb-8">
+                <h1 className="text-4xl font-black gradient-text">Users</h1>
+                <p className="theme-muted">
+                    Current backend exposes /api/users/me only, so this page shows the logged-in admin account.
+                </p>
+            </div>
 
-    setUsers(users.filter((u) => u.id !== id));
-  };
+            <div className="mb-6 flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-blue-200">
+                <FiInfo className="mt-1" />
+                <p>
+                    Full admin user listing, delete, block, and user detail actions need backend routes like GET /api/admin/users. I did not add backend changes because you asked to keep backend untouched.
+                </p>
+            </div>
 
-  return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold mb-6">Users</h1>
+            {error && (
+                <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-300">
+                    {error}
+                </div>
+            )}
 
-      <div className="theme-card rounded-2xl overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="theme-muted">
-              <th className="p-4 text-left">User</th>
+            <div className="glass rounded-[35px] overflow-hidden">
+                <table className="w-full">
+                    <thead>
+                        <tr className="theme-muted text-left">
+                            <th className="p-5">User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Premium</th>
+                            <th>Favorites</th>
+                            <th>Downloads</th>
+                        </tr>
+                    </thead>
 
-              <th>Email</th>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td className="p-10" colSpan={6}>
+                                    Loading...
+                                </td>
+                            </tr>
+                        ) : users.length === 0 ? (
+                            <tr>
+                                <td className="p-10 theme-muted" colSpan={6}>
+                                    No user data available.
+                                </td>
+                            </tr>
+                        ) : (
+                            users.map((user) => (
+                                <tr key={user.id} className="border-t border-white/10">
+                                    <td className="p-5">
+                                        <Link
+                                            href={`/admin/users/${user.id}`}
+                                            className="font-semibold"
+                                        >
+                                            {user.username || "User"}
+                                        </Link>
+                                    </td>
 
-              <th>Premium</th>
-
-              <th>Favorites</th>
-
-              <th></th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-t border-white/10">
-                <td className="p-4">
-                  <Link
-                    href={`/admin/users/${user.id}`}
-                    className="font-semibold"
-                  >
-                    {user.username || "User"}
-                  </Link>
-                </td>
-
-                <td>{user.email}</td>
-
-                <td>{user.isPremium ? "⭐ Premium" : "Free"}</td>
-
-                <td>{user.stats.favorites}</td>
-
-                <td>
-                  <button onClick={() => deleteUser(user.id)}>
-                    <Trash2 size={18} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+                                    <td>{user.email}</td>
+                                    <td>{user.role?.name || "USER"}</td>
+                                    <td>{user.isPremium ? "⭐ Premium" : "Free"}</td>
+                                    <td>{user.stats.favorites}</td>
+                                    <td>{user.stats.downloads}</td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 }

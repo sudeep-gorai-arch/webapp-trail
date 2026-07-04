@@ -1,5 +1,12 @@
-export interface User {
+export interface Role {
+    id: string;
 
+    name: string;
+
+    description?: string | null;
+}
+
+export interface User {
     id: string;
 
     email: string;
@@ -8,16 +15,13 @@ export interface User {
 
     avatarUrl?: string | null;
 
+    bio?: string | null;
 
-    role?: {
+    isPremium: boolean;
 
-        id: string;
+    role?: Role | null;
 
-        name: string;
+    createdAt?: string;
 
-        description?: string | null;
-
-    } | null;
-
-
+    updatedAt?: string;
 }

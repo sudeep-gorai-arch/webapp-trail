@@ -3,141 +3,128 @@ import { Category } from "./category";
 // ================= API =================
 
 export interface ApiResponse<T> {
-
     success: boolean;
-
     data: T;
-
     message?: string;
 
-
     pagination?: {
-
         total: number;
-
         limit: number;
-
         offset: number;
-
         hasMore: boolean;
-
     };
-
 }
+
+export type WallpaperQuality =
+    | "HD"
+    | "FULL_HD"
+    | "QHD"
+    | "UHD_4K"
+    | "UHD_8K";
 
 // ================= WALLPAPER =================
 
-
 export interface Wallpaper {
-
     id: string;
-
 
     title: string;
 
+    subtitle?: string;
 
-    description?: string;
+    description?: string | null;
 
+    slug?: string;
 
-    /**
-     * Mobile full image
-     */
-    imageUrl?: string;
+    imageUrl: string;
 
-
-    /**
-     * API currently returns this
-     */
     thumbnailUrl: string;
 
+    downloadUrl?: string;
 
     videoUrl?: string;
 
+    resolution?: string;
 
-    /**
-     * 3840x2160
-     * 7680x4320
-     */
-    resolution: string;
+    width?: number;
 
+    height?: number;
 
-    /**
-     * computed on frontend
-     * 4K / 8K
-     */
-    quality?: string;
+    aspectRatio?: number;
 
+    quality?: WallpaperQuality | string;
 
+    format?: string;
 
-    category?: Category;
+    categoryId?: string;
 
+    category?: Category | null;
 
+    likes?: number;
 
-    likes: number;
+    likeCount?: number;
 
-
-
-    /**
-     * OLD support
-     */
     downloads?: number;
 
+    downloadCount?: number;
 
+    views?: number;
 
-    /**
-     * API field
-     */
-    downloadCount: number;
-
-
+    viewCount?: number;
 
     isFeatured: boolean;
 
+    featuredOrder?: number;
 
     isPremium: boolean;
 
-
-    /**
-     * Active / Inactive status
-     */
     active: boolean;
 
+    status?: string;
 
+    dominantColor?: string | null;
+
+    blurHash?: string | null;
+
+    cacheVersion?: number;
+
+    tags?: string[];
+
+    variants?: {
+        type: string;
+        url: string;
+        width?: number;
+        height?: number;
+        size?: number;
+        format?: string;
+        quality?: number;
+        isDefault?: boolean;
+    }[];
+
+    isFavorite?: boolean;
+
+    isLiked?: boolean;
 
     createdAt: string;
 
-
-    updatedAt?: string;
-
+    updatedAt: string;
 }
 
-
-
-// ================= FAVORITES =================
+// ================= FAVORITE =================
 
 export interface Favorite {
-
     id: string;
 
     wallpaper: Wallpaper;
 
-
-    createdAt?: string;
-
+    createdAt: string;
 }
-
-
 
 // ================= DOWNLOAD =================
 
 export interface Download {
-
     id: string;
-
 
     wallpaper: Wallpaper;
 
-
     createdAt: string;
-
 }

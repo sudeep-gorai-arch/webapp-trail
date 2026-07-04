@@ -1,363 +1,284 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardCard from "@/components/admin/DashboardCard";
 
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell,
-  AreaChart,
-  Area,
+    LineChart,
+    Line,
+    BarChart,
+    Bar,
+    PieChart,
+    Pie,
+    ResponsiveContainer,
+    XAxis,
+    YAxis,
+    Tooltip,
+    Cell,
+    AreaChart,
+    Area,
 } from "recharts";
 
+import { getCategories } from "@/services/categoryService";
+import { getWallpapers } from "@/services/wallpaperService";
+import { userService, User } from "@/services/userService";
+import { Category } from "@/types/category";
+import { Wallpaper } from "@/types/wallpaper";
+
 export default function Admin() {
-  const [filter, setFilter] = useState("month");
+    const [filter, setFilter] = useState("month");
 
-  const stats = [
-    {
-      title: "Wallpapers",
-      value: "12.5K",
-      icon: "🖼️",
-      growth: "+12%",
-    },
+    const [loading, setLoading] = useState(true);
 
-    {
-      title: "Users",
-      value: "5.4K",
-      icon: "👥",
-      growth: "+8%",
-    },
+    const [error, setError] = useState("");
 
-    {
-      title: "Downloads",
-      value: "98K",
-      icon: "⬇️",
-      growth: "+35%",
-    },
+    const [wallpapers, setWallpapers] = useState<Wallpaper[]>([]);
 
-    {
-      title: "Revenue",
-      value: "₹84K",
-      icon: "💰",
-      growth: "+18%",
-    },
-  ];
+    const [wallpaperTotal, setWallpaperTotal] = useState(0);
 
-  const revenue = [
-    { month: "Jan", amount: 10000 },
-    { month: "Feb", amount: 25000 },
-    { month: "Mar", amount: 42000 },
-    { month: "Apr", amount: 84000 },
-  ];
+    const [categories, setCategories] = useState<Category[]>([]);
 
-  const downloads = [
-    { month: "Jan", value: 1200 },
-    { month: "Feb", value: 2500 },
-    { month: "Mar", value: 5000 },
-    { month: "Apr", value: 9000 },
-  ];
+    const [adminUser, setAdminUser] = useState<User | null>(null);
 
-  const categories = [
-    { name: "Anime", downloads: 8000 },
-    { name: "Gaming", downloads: 6500 },
-    { name: "Nature", downloads: 4000 },
-    { name: "Cars", downloads: 2500 },
-  ];
+    useEffect(() => {
+        loadDashboard();
+    }, []);
 
-  const premium = [
-    { name: "Free", value: 4500 },
+    async function loadDashboard() {
+        try {
+            setLoading(true);
+            setError("");
 
-    { name: "Premium", value: 900 },
-  ];
+            const [wallpaperRes, categoryRes, userRes] = await Promise.allSettled([
+                getWallpapers(20, 0, "", "", undefined, { sort: "downloads" }),
+                getCategories({ limit: 100, offset: 0 }),
+                userService.me(),
+            ]);
 
-  const wallpapers = [
-    "Cyber City",
-    "Galaxy Pro",
-    "Anime World",
-    "Super Cars",
-    "Forest HD",
-    "Dark Samurai",
-    "Mountains",
-    "Ocean Life",
-    "Future City",
-    "Space X",
-  ];
+            if (wallpaperRes.status === "fulfilled") {
+                setWallpapers(wallpaperRes.value.data || []);
+                setWallpaperTotal(wallpaperRes.value.pagination?.total || wallpaperRes.value.data?.length || 0);
+            }
 
-  const users = ["Shubham", "Alex", "John", "Maria", "David"];
+            if (categoryRes.status === "fulfilled") {
+                setCategories(categoryRes.value.data || []);
+            }
 
-  return (
-    <div
-      className="
+            if (userRes.status === "fulfilled") {
+                setAdminUser(userRes.value.data);
+            }
 
-theme-text
+            const failed = [wallpaperRes, categoryRes, userRes].find(
+                (result) => result.status === "rejected",
+            );
 
-h-[calc(100vh-120px)]
+            if (failed && failed.status === "rejected") {
+                setError(failed.reason?.response?.data?.message || "Some dashboard data could not be loaded");
+            }
+        } finally {
+            setLoading(false);
+        }
+    }
 
-overflow-y-auto
+    const totalDownloads = useMemo(
+        () => wallpapers.reduce((sum, item) => sum + (item.downloadCount ?? item.downloads ?? 0), 0),
+        [wallpapers],
+    );
 
-pr-3
+    const premiumCount = useMemo(
+        () => wallpapers.filter((item) => item.isPremium).length,
+        [wallpapers],
+    );
 
-no-scrollbar
+    const stats = [
+        {
+            title: "Wallpapers",
+            value: loading ? "..." : String(wallpaperTotal),
+            icon: "🖼️",
+            growth: "Live",
+        },
+        {
+            title: "Categories",
+            value: loading ? "..." : String(categories.length),
+            icon: "🗂️",
+            growth: "Live",
+        },
+        {
+            title: "Downloads",
+            value: loading ? "..." : String(totalDownloads),
+            icon: "⬇️",
+            growth: "Top 20",
+        },
+        {
+            title: "Premium",
+            value: loading ? "..." : String(premiumCount),
+            icon: "👑",
+            growth: "Top 20",
+        },
+    ];
 
-"
-    >
-      {/* HEADER */}
+    const downloads = wallpapers.slice(0, 8).map((item) => ({
+        title: item.title.length > 12 ? `${item.title.slice(0, 12)}...` : item.title,
+        value: item.downloadCount ?? item.downloads ?? 0,
+    }));
 
-      <section
-        className="
-glass
-rounded-[35px]
-p-8
-mb-8
+    const categoryChart = categories.slice(0, 8).map((category) => ({
+        name: category.name,
+        wallpapers: category.wallpaperCount ?? category.count ?? 0,
+    }));
 
-flex
-justify-between
-"
-      >
-        <div>
-          <h1 className="text-5xl font-black">
-            Dashboard
-            <span className="block gradient-text">FlexiWalls Analytics</span>
-          </h1>
+    const premium = [
+        { name: "Free", value: Math.max(wallpapers.length - premiumCount, 0) },
+        { name: "Premium", value: premiumCount },
+    ];
 
-          <p className="theme-muted">Complete business overview</p>
-        </div>
+    return (
+        <div className="theme-text h-[calc(100vh-120px)] overflow-y-auto pr-3 no-scrollbar">
+            <section className="glass rounded-[35px] p-8 mb-8 flex justify-between">
+                <div>
+                    <h1 className="text-5xl font-black">
+                        Dashboard
+                        <span className="block gradient-text">FlexiWalls Analytics</span>
+                    </h1>
 
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="
-glass
-px-6
-rounded-full
-outline-none
-"
-          style={{
-            background: "var(--bg-main)",
+                    <p className="theme-muted">
+                        Live admin overview from your backend APIs
+                    </p>
 
-            color: "var(--text-main)",
-          }}
-        >
-          <option value="today">Today</option>
+                    {error && (
+                        <p className="mt-3 text-sm text-red-300">
+                            {error}
+                        </p>
+                    )}
+                </div>
 
-          <option value="month">This Month</option>
+                <select
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value)}
+                    className="glass px-6 rounded-full outline-none"
+                    style={{
+                        background: "var(--bg-main)",
+                        color: "var(--text-main)",
+                    }}
+                >
+                    <option value="today">Today</option>
+                    <option value="month">This Month</option>
+                    <option value="year">Year</option>
+                </select>
+            </section>
 
-          <option value="year">Year</option>
-        </select>
-      </section>
-
-      {/* CARDS */}
-
-      <div
-        className="
-grid
-grid-cols-4
-gap-6
-mb-8
-"
-      >
-        {stats.map((item) => (
-          <DashboardCard key={item.title} {...item} />
-        ))}
-      </div>
-
-      <div
-        className="
-grid
-grid-cols-3
-gap-8
-"
-      >
-        {/* REVENUE */}
-
-        <div
-          className="
-glass
-rounded-[30px]
-p-6
-
-col-span-2
-"
-        >
-          <h2 className="text-2xl font-bold mb-5">💰 Revenue</h2>
-
-          <ResponsiveContainer height={250}>
-            <AreaChart data={revenue}>
-              <XAxis dataKey="month" />
-
-              <YAxis />
-
-              <Tooltip />
-
-              <Area
-                dataKey="amount"
-                stroke="var(--primary)"
-                fill="var(--primary)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* PREMIUM */}
-
-        <div
-          className="
-glass
-rounded-[30px]
-p-6
-"
-        >
-          <h2 className="text-2xl font-bold">👑 Premium Ratio</h2>
-
-          <ResponsiveContainer height={250}>
-            <PieChart>
-              <Pie data={premium} dataKey="value" label>
-                {premium.map((_, i) => (
-                  <Cell
-                    key={i}
-                    fill={i ? "var(--secondary)" : "var(--primary)"}
-                  />
+            <div className="grid grid-cols-4 gap-6 mb-8">
+                {stats.map((item) => (
+                    <DashboardCard key={item.title} {...item} />
                 ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+            </div>
+
+            <div className="grid grid-cols-3 gap-8">
+                <div className="glass rounded-[30px] p-6 col-span-2">
+                    <h2 className="text-2xl font-bold mb-5">⬇ Top Downloads</h2>
+
+                    <ResponsiveContainer height={250}>
+                        <AreaChart data={downloads}>
+                            <XAxis dataKey="title" />
+                            <YAxis />
+                            <Tooltip />
+                            <Area
+                                dataKey="value"
+                                stroke="var(--primary)"
+                                fill="var(--primary)"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="glass rounded-[30px] p-6">
+                    <h2 className="text-2xl font-bold">👑 Premium Ratio</h2>
+
+                    <ResponsiveContainer height={250}>
+                        <PieChart>
+                            <Pie data={premium} dataKey="value" label>
+                                {premium.map((_, index) => (
+                                    <Cell
+                                        key={index}
+                                        fill={index ? "var(--secondary)" : "var(--primary)"}
+                                    />
+                                ))}
+                            </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="glass rounded-[30px] p-6">
+                    <h2 className="font-bold mb-5">🔥 Categories</h2>
+
+                    <ResponsiveContainer height={230}>
+                        <BarChart data={categoryChart}>
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="wallpapers" fill="var(--secondary)" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="glass rounded-[30px] p-6 col-span-2">
+                    <h2 className="font-bold mb-5">🏆 Top Wallpapers</h2>
+
+                    <div className="space-y-3 h-[230px] overflow-y-auto no-scrollbar">
+                        {wallpapers.slice(0, 10).map((wallpaper, index) => (
+                            <div
+                                key={wallpaper.id}
+                                className="glass rounded-xl p-3 flex justify-between"
+                            >
+                                <span>
+                                    #{index + 1} {wallpaper.title}
+                                </span>
+
+                                <span>⬇ {wallpaper.downloadCount ?? wallpaper.downloads ?? 0}</span>
+                            </div>
+                        ))}
+
+                        {!loading && wallpapers.length === 0 && (
+                            <div className="theme-muted p-4">
+                                No wallpapers available yet.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="glass rounded-[30px] p-6 col-span-3">
+                    <h2 className="font-bold mb-5">👤 Current Admin User</h2>
+
+                    {adminUser ? (
+                        <div className="grid grid-cols-4 gap-4">
+                            <div className="glass rounded-xl p-5">
+                                <p className="theme-muted">Username</p>
+                                <h3 className="font-bold">{adminUser.username}</h3>
+                            </div>
+
+                            <div className="glass rounded-xl p-5">
+                                <p className="theme-muted">Email</p>
+                                <h3 className="font-bold truncate">{adminUser.email}</h3>
+                            </div>
+
+                            <div className="glass rounded-xl p-5">
+                                <p className="theme-muted">Role</p>
+                                <h3 className="font-bold">{adminUser.role?.name || "User"}</h3>
+                            </div>
+
+                            <div className="glass rounded-xl p-5">
+                                <p className="theme-muted">Premium</p>
+                                <h3 className="font-bold">{adminUser.isPremium ? "Yes" : "No"}</h3>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="theme-muted">
+                            Login token required to show current user details.
+                        </p>
+                    )}
+                </div>
+            </div>
         </div>
-
-        {/* DOWNLOADS */}
-
-        <div
-          className="
-glass
-rounded-[30px]
-p-6
-"
-        >
-          <h2 className="font-bold mb-5">⬇ Downloads</h2>
-
-          <ResponsiveContainer height={230}>
-            <LineChart data={downloads}>
-              <XAxis dataKey="month" />
-
-              <Tooltip />
-
-              <Line dataKey="value" stroke="var(--primary)" strokeWidth={4} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* CATEGORY */}
-
-        <div
-          className="
-glass
-rounded-[30px]
-p-6
-"
-        >
-          <h2 className="font-bold mb-5">🔥 Categories</h2>
-
-          <ResponsiveContainer height={230}>
-            <BarChart data={categories}>
-              <XAxis dataKey="name" />
-
-              <Tooltip />
-
-              <Bar dataKey="downloads" fill="var(--secondary)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* TOP WALLPAPERS */}
-
-        <div
-          className="
-glass
-rounded-[30px]
-p-6
-"
-        >
-          <h2 className="font-bold mb-5">🏆 Top Wallpapers</h2>
-
-          <div
-            className="
-space-y-3
-
-h-[230px]
-
-overflow-y-auto
-
-no-scrollbar
-"
-          >
-            {wallpapers.map((w, i) => (
-              <div
-                key={w}
-                className="
-glass
-rounded-xl
-p-3
-
-flex
-justify-between
-"
-              >
-                <span>
-                  #{i + 1} {w}
-                </span>
-
-                <span>⬇ {9000 - i * 500}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* USERS */}
-
-        <div
-          className="
-glass
-rounded-[30px]
-p-6
-col-span-3
-"
-        >
-          <h2 className="font-bold mb-5">👥 Recent Users</h2>
-
-          <div
-            className="
-grid
-grid-cols-5
-gap-4
-"
-          >
-            {users.map((u) => (
-              <div
-                key={u}
-                className="
-glass
-rounded-xl
-p-5
-text-center
-"
-              >
-                👤
-                <br />
-                {u}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
