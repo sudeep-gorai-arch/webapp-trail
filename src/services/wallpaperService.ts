@@ -4,6 +4,7 @@ import {
     Wallpaper,
     ApiResponse,
     WallpaperQuality,
+    WallpaperMediaType,
 } from "@/types/wallpaper";
 import { Category } from "@/types/category";
 
@@ -18,6 +19,8 @@ const QUALITY_MAP: Record<string, WallpaperQuality> = {
     "8K": "UHD_8K",
     UHD_8K: "UHD_8K",
 };
+
+const VIDEO_MIME_PREFIX = "video/";
 
 const apiOrigin = () => {
     const baseUrl =
@@ -61,36 +64,136 @@ const buildResolution = (item: any) => {
     return "";
 };
 
+const isVideoFile = (file?: File | null) => {
+    if (!file) return false;
+
+    const type = String(file.type || "").toLowerCase();
+
+    if (type.startsWith(VIDEO_MIME_PREFIX)) {
+        return true;
+    }
+
+    const name = String(file.name || "").toLowerCase();
+
+    return /\.(mp4|webm|mov|m4v)$/i.test(name);
+};
+
+const normalizeMediaTypeFromFile = (
+    mediaType?: WallpaperMediaType,
+    file?: File | null,
+    videoFile?: File | null,
+): WallpaperMediaType => {
+    if (mediaType === "VIDEO" || mediaType === "IMAGE") {
+        return mediaType;
+    }
+
+    if (videoFile || isVideoFile(file)) {
+        return "VIDEO";
+    }
+
+    return "IMAGE";
+};
+
 const normalizeWallpaper = (item: any): Wallpaper => {
+    const mediaType = String(
+        item.mediaType ||
+        item.media_type ||
+        (item.videoUrl || item.videoPath ? "VIDEO" : "IMAGE"),
+    ).toUpperCase();
+
+    const isVideo = mediaType === "VIDEO";
+
     const imageUrl =
         absoluteBackendUrl(item.imageUrl) ||
         absoluteBackendUrl(item.displayPath) ||
-        absoluteBackendUrl(item.originalPath);
+        absoluteBackendUrl(item.originalPath) ||
+        absoluteBackendUrl(item.videoPreviewUrl) ||
+        absoluteBackendUrl(item.videoPreviewPath) ||
+        absoluteBackendUrl(item.thumbnailUrl) ||
+        absoluteBackendUrl(item.thumbnailPath);
+
+    const videoUrl =
+        absoluteBackendUrl(item.videoUrl) ||
+        absoluteBackendUrl(item.videoPath);
+
+    const videoPreviewUrl =
+        absoluteBackendUrl(item.videoPreviewUrl) ||
+        absoluteBackendUrl(item.videoPreviewPath) ||
+        imageUrl;
+
+    const videoThumbnailUrl =
+        absoluteBackendUrl(item.videoThumbnailUrl) ||
+        absoluteBackendUrl(item.videoThumbnailPath) ||
+        absoluteBackendUrl(item.thumbnailUrl) ||
+        absoluteBackendUrl(item.thumbnailPath) ||
+        videoPreviewUrl ||
+        imageUrl;
 
     const thumbnailUrl =
         absoluteBackendUrl(item.thumbnailUrl) ||
         absoluteBackendUrl(item.thumbnailPath) ||
+        videoThumbnailUrl ||
         imageUrl;
 
     const downloadUrl =
         absoluteBackendUrl(item.downloadUrl) ||
+        (isVideo ? videoUrl : undefined) ||
         absoluteBackendUrl(item.originalPath) ||
-        imageUrl;
+        imageUrl ||
+        thumbnailUrl;
 
     return {
         ...item,
-        imageUrl,
-        thumbnailUrl,
-        downloadUrl,
+
+        mediaType: isVideo ? "VIDEO" : "IMAGE",
+
+        isVideo,
+
+        imageUrl: imageUrl || "",
+
+        thumbnailUrl: thumbnailUrl || imageUrl || "",
+
+        downloadUrl: downloadUrl || null,
+
+        videoUrl: videoUrl || null,
+
+        videoPreviewUrl: videoPreviewUrl || null,
+
+        videoThumbnailUrl: videoThumbnailUrl || null,
+
+        durationSeconds:
+            item.durationSeconds ?? item.duration_seconds ?? null,
+
+        videoBitrate:
+            item.videoBitrate ?? item.video_bitrate ?? null,
+
+        videoFps:
+            item.videoFps ?? item.video_fps ?? null,
+
+        videoSize:
+            item.videoSize ?? item.video_size ?? null,
+
+        mimeType:
+            item.mimeType ?? item.mime_type ?? null,
+
         resolution: buildResolution(item),
+
         likes: item.likes ?? item.likeCount ?? 0,
+
         likeCount: item.likeCount ?? item.likes ?? 0,
+
         downloads: item.downloads ?? item.downloadCount ?? 0,
+
         downloadCount: item.downloadCount ?? item.downloads ?? 0,
+
         views: item.views ?? item.viewCount ?? 0,
+
         viewCount: item.viewCount ?? item.views ?? 0,
+
         isPremium: item.isPremium ?? false,
+
         isFeatured: item.isFeatured ?? false,
+
         active: item.active ?? true,
     };
 };
@@ -127,9 +230,66 @@ const appendTags = (formData: FormData, tags?: string[] | string) => {
             .map((tag) => tag.trim())
             .filter(Boolean);
 
-    values.forEach((tag, index) => {
-        formData.append(`tags[${index}]`, tag);
+    values.forEach((tag) => {
+        formData.append("tags", tag);
     });
+};
+
+const appendOptionalNumber = (
+    formData: FormData,
+    key: string,
+    value?: number | string | null,
+) => {
+    if (value === undefined || value === null || value === "") {
+        return;
+    }
+
+    formData.append(key, String(value));
+};
+
+const appendCommonWallpaperFields = (
+    formData: FormData,
+    payload: {
+        title?: string;
+        description?: string;
+        categoryId: string;
+        mediaType?: WallpaperMediaType;
+        quality?: string;
+        isPremium: boolean;
+        isFeatured: boolean;
+        featuredOrder?: number;
+        durationSeconds?: number | string | null;
+        videoBitrate?: number | string | null;
+        videoFps?: number | string | null;
+        tags?: string[] | string;
+    },
+) => {
+    if (payload.title) {
+        formData.append("title", payload.title);
+    }
+
+    formData.append("categoryId", payload.categoryId);
+    formData.append("quality", normalizeQuality(payload.quality));
+    formData.append("isPremium", String(payload.isPremium));
+    formData.append("isFeatured", String(payload.isFeatured));
+
+    if (payload.mediaType) {
+        formData.append("mediaType", payload.mediaType);
+    }
+
+    if (payload.description) {
+        formData.append("description", payload.description);
+    }
+
+    if (payload.featuredOrder !== undefined) {
+        formData.append("featuredOrder", String(payload.featuredOrder));
+    }
+
+    appendOptionalNumber(formData, "durationSeconds", payload.durationSeconds);
+    appendOptionalNumber(formData, "videoBitrate", payload.videoBitrate);
+    appendOptionalNumber(formData, "videoFps", payload.videoFps);
+
+    appendTags(formData, payload.tags);
 };
 
 // =============================
@@ -146,6 +306,7 @@ export const getWallpapers = async (
         premium?: boolean;
         featured?: boolean;
         quality?: WallpaperQuality;
+        mediaType?: WallpaperMediaType;
         sort?: "latest" | "popular" | "downloads" | "likes" | "featured";
     },
 ) => {
@@ -257,20 +418,27 @@ export const getWallpaperById = async (id: string) => {
 
 // =============================
 // CREATE SINGLE WALLPAPER
-// Backend multipart field names: image, title, description, categoryId,
-// quality, isPremium, isFeatured, featuredOrder, tags[index]
 // =============================
 
 export interface CreateWallpaperRequest {
     title: string;
     description?: string;
     categoryId: string;
+    mediaType?: WallpaperMediaType;
     quality?: string;
     isPremium: boolean;
     isFeatured: boolean;
     featuredOrder?: number;
     tags?: string[] | string;
-    image: File;
+
+    image?: File;
+    video?: File;
+    previewImage?: File;
+    thumbnail?: File;
+
+    durationSeconds?: number | string | null;
+    videoBitrate?: number | string | null;
+    videoFps?: number | string | null;
 }
 
 export const createWallpaper = async (
@@ -278,22 +446,34 @@ export const createWallpaper = async (
 ) => {
     const formData = new FormData();
 
-    formData.append("image", payload.image);
-    formData.append("title", payload.title);
-    formData.append("categoryId", payload.categoryId);
-    formData.append("quality", normalizeQuality(payload.quality));
-    formData.append("isPremium", String(payload.isPremium));
-    formData.append("isFeatured", String(payload.isFeatured));
+    const mediaType = normalizeMediaTypeFromFile(
+        payload.mediaType,
+        payload.image,
+        payload.video,
+    );
 
-    if (payload.description) {
-        formData.append("description", payload.description);
+    appendCommonWallpaperFields(formData, {
+        ...payload,
+        mediaType,
+    });
+
+    if (mediaType === "VIDEO") {
+        if (!payload.video && payload.image && isVideoFile(payload.image)) {
+            formData.append("video", payload.image);
+        } else if (payload.video) {
+            formData.append("video", payload.video);
+        }
+
+        if (payload.previewImage) {
+            formData.append("previewImage", payload.previewImage);
+        }
+
+        if (payload.thumbnail) {
+            formData.append("thumbnail", payload.thumbnail);
+        }
+    } else if (payload.image) {
+        formData.append("image", payload.image);
     }
-
-    if (payload.featuredOrder !== undefined) {
-        formData.append("featuredOrder", String(payload.featuredOrder));
-    }
-
-    appendTags(formData, payload.tags);
 
     const response = await API.post<ApiResponse<Wallpaper>>(
         "/wallpapers",
@@ -322,6 +502,12 @@ export interface BatchWallpaperRequest {
         title: string;
         description?: string;
         file: File;
+        mediaType?: WallpaperMediaType;
+        previewImage?: File;
+        thumbnail?: File;
+        durationSeconds?: number | string | null;
+        videoBitrate?: number | string | null;
+        videoFps?: number | string | null;
     }[];
 }
 
@@ -342,9 +528,45 @@ export const uploadWallpapers = async (
     appendTags(formData, payload.tags);
 
     payload.wallpapers.forEach((item, index) => {
-        formData.append("images", item.file);
+        const mediaType = normalizeMediaTypeFromFile(
+            item.mediaType,
+            item.file,
+        );
+
+        if (mediaType === "VIDEO") {
+            formData.append("videos", item.file);
+
+            if (item.previewImage) {
+                formData.append("previewImages", item.previewImage);
+            }
+
+            if (item.thumbnail) {
+                formData.append("thumbnails", item.thumbnail);
+            }
+        } else {
+            formData.append("images", item.file);
+        }
+
         formData.append(`titles[${index}]`, item.title);
         formData.append(`descriptions[${index}]`, item.description ?? "");
+
+        appendOptionalNumber(
+            formData,
+            `durationSeconds[${index}]`,
+            item.durationSeconds,
+        );
+
+        appendOptionalNumber(
+            formData,
+            `videoBitrate[${index}]`,
+            item.videoBitrate,
+        );
+
+        appendOptionalNumber(
+            formData,
+            `videoFps[${index}]`,
+            item.videoFps,
+        );
     });
 
     const response = await API.post<ApiResponse<Wallpaper[]>>(
@@ -367,11 +589,15 @@ export interface UpdateWallpaperRequest {
     slug?: string;
     description?: string | null;
     categoryId?: string;
+    mediaType?: WallpaperMediaType;
     quality?: string;
     isPremium?: boolean;
     isFeatured?: boolean;
     featuredOrder?: number;
     active?: boolean;
+    durationSeconds?: number | string | null;
+    videoBitrate?: number | string | null;
+    videoFps?: number | string | null;
     tags?: string[];
 }
 

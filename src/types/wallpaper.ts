@@ -15,12 +15,39 @@ export interface ApiResponse<T> {
     };
 }
 
+// ================= WALLPAPER MEDIA =================
+
+export type WallpaperMediaType = "IMAGE" | "VIDEO";
+
 export type WallpaperQuality =
     | "HD"
     | "FULL_HD"
     | "QHD"
     | "UHD_4K"
     | "UHD_8K";
+
+export type WallpaperVariantType =
+    | "THUMBNAIL"
+    | "DISPLAY"
+    | "HD"
+    | "FULL_HD"
+    | "QHD"
+    | "UHD"
+    | "ORIGINAL"
+    | "VIDEO"
+    | "VIDEO_PREVIEW"
+    | "VIDEO_THUMBNAIL";
+
+export type WallpaperFileFormat =
+    | "WEBP"
+    | "JPG"
+    | "PNG"
+    | "AVIF"
+    | "MP4"
+    | "WEBM"
+    | "MOV"
+    | "M4V"
+    | string;
 
 // ================= WALLPAPER =================
 
@@ -35,13 +62,33 @@ export interface Wallpaper {
 
     slug?: string;
 
+    mediaType?: WallpaperMediaType | string;
+
+    isVideo?: boolean;
+
     imageUrl: string;
 
     thumbnailUrl: string;
 
-    downloadUrl?: string;
+    downloadUrl?: string | null;
 
-    videoUrl?: string;
+    videoUrl?: string | null;
+
+    videoPreviewUrl?: string | null;
+
+    videoThumbnailUrl?: string | null;
+
+    durationSeconds?: number | null;
+
+    videoBitrate?: number | null;
+
+    videoFps?: number | null;
+
+    videoSize?: number | null;
+
+    mimeType?: string | null;
+
+    extension?: string | null;
 
     resolution?: string;
 
@@ -53,7 +100,7 @@ export interface Wallpaper {
 
     quality?: WallpaperQuality | string;
 
-    format?: string;
+    format?: WallpaperFileFormat;
 
     categoryId?: string;
 
@@ -63,9 +110,15 @@ export interface Wallpaper {
 
     likeCount?: number;
 
+    favoriteCount?: number;
+
     downloads?: number;
 
     downloadCount?: number;
+
+    downloadsThisWeek?: number;
+
+    weeklyDownloads?: number;
 
     views?: number;
 
@@ -89,16 +142,9 @@ export interface Wallpaper {
 
     tags?: string[];
 
-    variants?: {
-        type: string;
-        url: string;
-        width?: number;
-        height?: number;
-        size?: number;
-        format?: string;
-        quality?: number;
-        isDefault?: boolean;
-    }[];
+    variants?: WallpaperVariant[];
+
+    wallpaperVariants?: WallpaperVariant[];
 
     isFavorite?: boolean;
 
@@ -107,6 +153,84 @@ export interface Wallpaper {
     createdAt: string;
 
     updatedAt: string;
+}
+
+export interface WallpaperVariant {
+    id?: string;
+
+    type: WallpaperVariantType | string;
+
+    url: string;
+
+    width?: number;
+
+    height?: number;
+
+    size?: number;
+
+    format?: WallpaperFileFormat;
+
+    quality?: number;
+
+    compressionQuality?: number;
+
+    isDefault?: boolean;
+}
+
+// ================= CREATE / UPDATE =================
+
+export interface CreateWallpaperInput {
+    title: string;
+
+    description?: string;
+
+    categoryId: string;
+
+    mediaType?: WallpaperMediaType;
+
+    quality?: WallpaperQuality;
+
+    isPremium?: boolean;
+
+    isFeatured?: boolean;
+
+    featuredOrder?: number;
+
+    durationSeconds?: number;
+
+    videoBitrate?: number;
+
+    videoFps?: number;
+
+    tags?: string[];
+}
+
+export interface UpdateWallpaperInput {
+    title?: string;
+
+    description?: string;
+
+    categoryId?: string;
+
+    mediaType?: WallpaperMediaType;
+
+    quality?: WallpaperQuality;
+
+    isPremium?: boolean;
+
+    isFeatured?: boolean;
+
+    featuredOrder?: number;
+
+    active?: boolean;
+
+    durationSeconds?: number;
+
+    videoBitrate?: number;
+
+    videoFps?: number;
+
+    tags?: string[];
 }
 
 // ================= FAVORITE =================
@@ -124,7 +248,41 @@ export interface Favorite {
 export interface Download {
     id: string;
 
-    wallpaper: Wallpaper;
+    wallpaper?: Wallpaper;
+
+    wallpaperId?: string;
+
+    mediaType?: WallpaperMediaType | string;
+
+    isVideo?: boolean;
+
+    downloadUrl?: string | null;
+
+    imageUrl?: string | null;
+
+    thumbnailUrl?: string | null;
+
+    videoUrl?: string | null;
+
+    videoPreviewUrl?: string | null;
+
+    videoThumbnailUrl?: string | null;
+
+    durationSeconds?: number | null;
+
+    videoSize?: number | null;
+
+    mimeType?: string | null;
+
+    extension?: string | null;
+
+    quality?: WallpaperQuality | string;
+
+    isPremium?: boolean;
+
+    downloadCount?: number;
+
+    favoriteCount?: number;
 
     createdAt: string;
 }

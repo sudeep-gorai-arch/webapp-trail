@@ -12,6 +12,8 @@ import {
     FiCheckCircle,
     FiXCircle,
     FiX,
+    FiVideo,
+    FiImage,
 } from "react-icons/fi";
 
 import { useRouter } from "next/navigation";
@@ -22,6 +24,8 @@ import { getCategories } from "@/services/categoryService";
 
 import { Category } from "@/types/category";
 
+type MediaType = "IMAGE" | "VIDEO";
+
 type UploadPopup = {
     type: "success" | "error";
     title: string;
@@ -30,10 +34,84 @@ type UploadPopup = {
     totalCount: number;
 };
 
+type WallpaperUploadItem = {
+    title: string;
+    description?: string;
+    file: File;
+    mediaType: MediaType;
+    previewImage?: File;
+    thumbnail?: File;
+    durationSeconds?: string;
+    videoBitrate?: string;
+    videoFps?: string;
+};
+
+type PreviewItem = {
+    mediaUrl: string;
+    previewImageUrl?: string;
+    thumbnailUrl?: string;
+};
+
+const selectStyle = {
+    background: "var(--bg-main)",
+    color: "var(--text-main)",
+};
+
+const acceptedMedia =
+    "image/*,video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v";
+
+function isVideoFile(file: File) {
+    const type = String(file.type || "").toLowerCase();
+
+    if (type.startsWith("video/")) {
+        return true;
+    }
+
+    return /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+}
+
+function getMediaType(file: File): MediaType {
+    return isVideoFile(file) ? "VIDEO" : "IMAGE";
+}
+
+function cleanFileName(fileName: string) {
+    return fileName.replace(/\.[^/.]+$/, "");
+}
+
+function formatFileSize(size: number) {
+    if (!Number.isFinite(size) || size <= 0) {
+        return "0 MB";
+    }
+
+    const mb = size / (1024 * 1024);
+
+    if (mb >= 1) {
+        return `${mb.toFixed(1)} MB`;
+    }
+
+    return `${(size / 1024).toFixed(1)} KB`;
+}
+
+function revokePreviewItem(preview?: PreviewItem) {
+    if (!preview) return;
+
+    if (preview.mediaUrl) {
+        URL.revokeObjectURL(preview.mediaUrl);
+    }
+
+    if (preview.previewImageUrl) {
+        URL.revokeObjectURL(preview.previewImageUrl);
+    }
+
+    if (preview.thumbnailUrl) {
+        URL.revokeObjectURL(preview.thumbnailUrl);
+    }
+}
+
 export default function Page() {
     const router = useRouter();
 
-    const [previews, setPreviews] = useState<string[]>([]);
+    const [previews, setPreviews] = useState<PreviewItem[]>([]);
 
     const [categories, setCategories] = useState<Category[]>([]);
 
@@ -61,10 +139,86 @@ export default function Page() {
         }
     }
 
-    const selectStyle = {
-        background: "var(--bg-main)",
-        color: "var(--text-main)",
-    };
+    function addFiles(
+        files: File[],
+        currentWallpapers: WallpaperUploadItem[],
+        setFieldValue: (field: string, value: any) => void,
+    ) {
+        if (files.length === 0) {
+            return;
+        }
+
+        const newWallpapers: WallpaperUploadItem[] = files.map((file) => {
+            const mediaType = getMediaType(file);
+
+            return {
+                title: cleanFileName(file.name),
+                description: "",
+                file,
+                mediaType,
+                durationSeconds: "",
+                videoBitrate: "",
+                videoFps: "",
+            };
+        });
+
+        const newPreviews: PreviewItem[] = files.map((file) => ({
+            mediaUrl: URL.createObjectURL(file),
+        }));
+
+        setPreviews((old) => [...old, ...newPreviews]);
+
+        setFieldValue("wallpapers", [
+            ...currentWallpapers,
+            ...newWallpapers,
+        ]);
+    }
+
+    function removeFile(index: number, remove: (index: number) => void) {
+        remove(index);
+
+        setPreviews((current) => {
+            revokePreviewItem(current[index]);
+
+            return current.filter((_, i) => i !== index);
+        });
+    }
+
+    function updateExtraPreview(
+        index: number,
+        type: "previewImageUrl" | "thumbnailUrl",
+        file: File,
+    ) {
+        const url = URL.createObjectURL(file);
+
+        setPreviews((current) => {
+            const next = [...current];
+
+            const oldPreview = next[index];
+
+            if (!oldPreview) {
+                next[index] = {
+                    mediaUrl: "",
+                    [type]: url,
+                };
+
+                return next;
+            }
+
+            const oldUrl = oldPreview[type];
+
+            if (oldUrl) {
+                URL.revokeObjectURL(oldUrl);
+            }
+
+            next[index] = {
+                ...oldPreview,
+                [type]: url,
+            };
+
+            return next;
+        });
+    }
 
     return (
         <div className="theme-text">
@@ -75,8 +229,9 @@ export default function Page() {
                     </h1>
 
                     <p className="theme-muted mt-2">
-                        Upload wallpapers to backend /api/wallpapers/batch. The
-                        backend stores each image under the selected category folder.
+                        Upload image and video wallpapers to the backend. Images
+                        are stored as static wallpapers, and videos are stored as
+                        video wallpapers with optional preview/thumbnail images.
                     </p>
                 </div>
 
@@ -101,11 +256,7 @@ export default function Page() {
                     quality: "UHD_4K",
                     type: "free",
                     tags: "",
-                    wallpapers: [] as {
-                        title: string;
-                        description?: string;
-                        file: File;
-                    }[],
+                    wallpapers: [] as WallpaperUploadItem[],
                 }}
                 onSubmit={async (values, { resetForm }) => {
                     const totalCount = values.wallpapers.length;
@@ -120,7 +271,7 @@ export default function Page() {
                         }
 
                         if (totalCount === 0) {
-                            setError("Select at least one wallpaper image.");
+                            setError("Select at least one wallpaper image or video.");
                             return;
                         }
 
@@ -153,6 +304,8 @@ export default function Page() {
                         });
 
                         resetForm();
+
+                        previews.forEach(revokePreviewItem);
                         setPreviews([]);
                     } catch (err: any) {
                         const backendMessage =
@@ -257,13 +410,17 @@ export default function Page() {
                             className="
                             glass
                             rounded-[35px]
-                            h-52
+                            h-56
                             flex
                             flex-col
                             items-center
                             justify-center
                             cursor-pointer
                             mb-10
+                            border
+                            border-white/10
+                            transition
+                            hover:border-white/25
                             "
                         >
                             <FiUpload size={45} />
@@ -272,37 +429,25 @@ export default function Page() {
                                 Select Wallpapers
                             </h2>
 
-                            <p className="theme-muted text-sm mt-2">
-                                JPG, PNG, WEBP, AVIF accepted by backend
+                            <p className="theme-muted text-sm mt-2 text-center">
+                                Images: JPG, PNG, WEBP, AVIF
+                                <br />
+                                Videos: MP4, WEBM, MOV, M4V
                             </p>
 
                             <input
                                 hidden
                                 multiple
                                 type="file"
-                                accept="image/*"
+                                accept={acceptedMedia}
                                 onChange={(event) => {
                                     const files = Array.from(event.target.files || []);
 
-                                    if (files.length === 0) {
-                                        return;
-                                    }
-
-                                    setPreviews((old) => [
-                                        ...old,
-                                        ...files.map((file) =>
-                                            URL.createObjectURL(file)
-                                        ),
-                                    ]);
-
-                                    setFieldValue("wallpapers", [
-                                        ...values.wallpapers,
-                                        ...files.map((file) => ({
-                                            title: file.name.replace(/\..+$/, ""),
-                                            description: "",
-                                            file,
-                                        })),
-                                    ]);
+                                    addFiles(
+                                        files,
+                                        values.wallpapers,
+                                        setFieldValue,
+                                    );
 
                                     event.target.value = "";
                                 }}
@@ -311,48 +456,220 @@ export default function Page() {
 
                         <FieldArray name="wallpapers">
                             {({ remove }) => (
-                                <div className="grid grid-cols-5 gap-5">
-                                    {values.wallpapers.map((item, index) => (
-                                        <div
-                                            key={`${item.file.name}-${index}`}
-                                            className="glass rounded-[25px] p-4"
-                                        >
-                                            <Image
-                                                src={previews[index]}
-                                                alt="preview"
-                                                width={200}
-                                                height={160}
-                                                className="h-32 w-full object-cover rounded-xl"
-                                            />
+                                <div className="grid grid-cols-4 gap-5">
+                                    {values.wallpapers.map((item, index) => {
+                                        const preview = previews[index];
 
-                                            <Field
-                                                name={`wallpapers.${index}.title`}
-                                                className="glass mt-3 p-3 rounded-xl w-full outline-none theme-text text-sm"
-                                            />
+                                        const isVideo = item.mediaType === "VIDEO";
 
-                                            <Field
-                                                as="textarea"
-                                                name={`wallpapers.${index}.description`}
-                                                placeholder="Description"
-                                                rows={3}
-                                                className="glass mt-3 p-3 rounded-xl w-full outline-none theme-text text-sm resize-none"
-                                            />
-
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    remove(index);
-
-                                                    setPreviews((current) =>
-                                                        current.filter((_, i) => i !== index)
-                                                    );
-                                                }}
-                                                className="mt-3 w-full glass p-2 rounded-xl flex justify-center"
+                                        return (
+                                            <div
+                                                key={`${item.file.name}-${index}`}
+                                                className="glass rounded-[25px] p-4"
                                             >
-                                                <FiTrash />
-                                            </button>
-                                        </div>
-                                    ))}
+                                                <div className="relative overflow-hidden rounded-xl bg-black/40">
+                                                    {isVideo ? (
+                                                        <video
+                                                            src={preview?.mediaUrl}
+                                                            className="h-36 w-full object-cover"
+                                                            muted
+                                                            loop
+                                                            playsInline
+                                                            controls
+                                                        />
+                                                    ) : (
+                                                        <Image
+                                                            src={preview?.mediaUrl || ""}
+                                                            alt="preview"
+                                                            width={260}
+                                                            height={170}
+                                                            unoptimized
+                                                            className="h-36 w-full object-cover"
+                                                        />
+                                                    )}
+
+                                                    <div
+                                                        className={`
+                                                        absolute
+                                                        left-3
+                                                        top-3
+                                                        flex
+                                                        items-center
+                                                        gap-1.5
+                                                        rounded-full
+                                                        px-3
+                                                        py-1
+                                                        text-xs
+                                                        font-bold
+                                                        ${
+                                                            isVideo
+                                                                ? "bg-purple-500/80 text-white"
+                                                                : "bg-emerald-500/80 text-white"
+                                                        }
+                                                        `}
+                                                    >
+                                                        {isVideo ? <FiVideo /> : <FiImage />}
+                                                        {isVideo ? "Video" : "Image"}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-3 flex items-center justify-between gap-2 text-xs text-white/50">
+                                                    <span className="truncate">
+                                                        {item.file.name}
+                                                    </span>
+
+                                                    <span>{formatFileSize(item.file.size)}</span>
+                                                </div>
+
+                                                <Field
+                                                    as="select"
+                                                    name={`wallpapers.${index}.mediaType`}
+                                                    style={selectStyle}
+                                                    className="glass mt-3 p-3 rounded-xl w-full outline-none theme-text text-sm"
+                                                >
+                                                    <option value="IMAGE">Image Wallpaper</option>
+                                                    <option value="VIDEO">Video Wallpaper</option>
+                                                </Field>
+
+                                                <Field
+                                                    name={`wallpapers.${index}.title`}
+                                                    placeholder="Title"
+                                                    className="glass mt-3 p-3 rounded-xl w-full outline-none theme-text text-sm"
+                                                />
+
+                                                <Field
+                                                    as="textarea"
+                                                    name={`wallpapers.${index}.description`}
+                                                    placeholder="Description"
+                                                    rows={3}
+                                                    className="glass mt-3 p-3 rounded-xl w-full outline-none theme-text text-sm resize-none"
+                                                />
+
+                                                {isVideo && (
+                                                    <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                                                        <div className="mb-3 text-xs font-bold text-white/70">
+                                                            Video options
+                                                        </div>
+
+                                                        <label className="block cursor-pointer rounded-xl border border-white/10 bg-white/[0.04] p-3 text-xs text-white/70 transition hover:bg-white/[0.08]">
+                                                            Preview Image
+                                                            <span className="ml-2 text-white/35">
+                                                                optional
+                                                            </span>
+
+                                                            <input
+                                                                hidden
+                                                                type="file"
+                                                                accept="image/*"
+                                                                onChange={(event) => {
+                                                                    const file =
+                                                                        event.target.files?.[0];
+
+                                                                    if (!file) return;
+
+                                                                    setFieldValue(
+                                                                        `wallpapers.${index}.previewImage`,
+                                                                        file,
+                                                                    );
+
+                                                                    updateExtraPreview(
+                                                                        index,
+                                                                        "previewImageUrl",
+                                                                        file,
+                                                                    );
+
+                                                                    event.target.value = "";
+                                                                }}
+                                                            />
+                                                        </label>
+
+                                                        {preview?.previewImageUrl && (
+                                                            <Image
+                                                                src={preview.previewImageUrl}
+                                                                alt="video preview"
+                                                                width={220}
+                                                                height={120}
+                                                                unoptimized
+                                                                className="mt-3 h-20 w-full rounded-xl object-cover"
+                                                            />
+                                                        )}
+
+                                                        <label className="mt-3 block cursor-pointer rounded-xl border border-white/10 bg-white/[0.04] p-3 text-xs text-white/70 transition hover:bg-white/[0.08]">
+                                                            Thumbnail Image
+                                                            <span className="ml-2 text-white/35">
+                                                                optional
+                                                            </span>
+
+                                                            <input
+                                                                hidden
+                                                                type="file"
+                                                                accept="image/*"
+                                                                onChange={(event) => {
+                                                                    const file =
+                                                                        event.target.files?.[0];
+
+                                                                    if (!file) return;
+
+                                                                    setFieldValue(
+                                                                        `wallpapers.${index}.thumbnail`,
+                                                                        file,
+                                                                    );
+
+                                                                    updateExtraPreview(
+                                                                        index,
+                                                                        "thumbnailUrl",
+                                                                        file,
+                                                                    );
+
+                                                                    event.target.value = "";
+                                                                }}
+                                                            />
+                                                        </label>
+
+                                                        {preview?.thumbnailUrl && (
+                                                            <Image
+                                                                src={preview.thumbnailUrl}
+                                                                alt="video thumbnail"
+                                                                width={220}
+                                                                height={120}
+                                                                unoptimized
+                                                                className="mt-3 h-20 w-full rounded-xl object-cover"
+                                                            />
+                                                        )}
+
+                                                        <div className="mt-3 grid grid-cols-3 gap-2">
+                                                            <Field
+                                                                name={`wallpapers.${index}.durationSeconds`}
+                                                                placeholder="Duration"
+                                                                className="glass p-2 rounded-xl w-full outline-none theme-text text-xs"
+                                                            />
+
+                                                            <Field
+                                                                name={`wallpapers.${index}.videoBitrate`}
+                                                                placeholder="Bitrate"
+                                                                className="glass p-2 rounded-xl w-full outline-none theme-text text-xs"
+                                                            />
+
+                                                            <Field
+                                                                name={`wallpapers.${index}.videoFps`}
+                                                                placeholder="FPS"
+                                                                className="glass p-2 rounded-xl w-full outline-none theme-text text-xs"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeFile(index, remove)}
+                                                    className="mt-3 w-full glass p-3 rounded-xl flex items-center justify-center gap-2 text-red-300 transition hover:bg-red-500/10"
+                                                >
+                                                    <FiTrash />
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </FieldArray>
@@ -367,7 +684,9 @@ export default function Page() {
                                 color: "white",
                             }}
                         >
-                            {uploading ? "Uploading..." : "Upload Wallpapers 🚀"}
+                            {uploading
+                                ? "Uploading..."
+                                : `Upload ${values.wallpapers.length || ""} Wallpapers 🚀`}
                         </button>
                     </Form>
                 )}
