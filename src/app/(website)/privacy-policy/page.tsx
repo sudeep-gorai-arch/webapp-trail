@@ -362,12 +362,10 @@ export default function PrivacyPolicy() {
 
               {section.id === "deletion" ? (
                 <a
-                  href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-                    "FlexiWalls Account Deletion Request",
-                  )}`}
+                  href="/delete-account"
                   className="mt-6 inline-flex rounded-full border border-white/10 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
                 >
-                  Request account deletion
+                  How to delete your account and data
                 </a>
               ) : null}
             </section>

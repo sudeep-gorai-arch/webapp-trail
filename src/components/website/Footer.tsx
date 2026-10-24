@@ -22,6 +22,10 @@ export default function Footer() {
       name: "Privacy",
       url: "/privacy-policy",
     },
+    {
+      name: "Delete Account & Data",
+      url: "/delete-account",
+    },
   ];
 
   return (
