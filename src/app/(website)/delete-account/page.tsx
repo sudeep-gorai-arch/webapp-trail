@@ -112,6 +112,19 @@ export default function DeleteAccountPage() {
           </p>
         </section>
 
+        <section aria-labelledby="processing-heading" className="mt-12">
+          <h2 id="processing-heading" className="text-2xl font-bold">
+            Processing and retention periods
+          </h2>
+          <p className="mt-3 leading-7 text-[var(--text-muted)]">
+            We process emailed deletion requests within 3 days of receipt.
+            Account ownership must be verified before we delete personal data.
+            Limited residual records are retained for up to 15 days after
+            account deletion and then deleted, unless a longer retention
+            period is required by law.
+          </p>
+        </section>
+
         <section aria-labelledby="included-heading" className="mt-12">
           <h2 id="included-heading" className="text-2xl font-bold">
             What happens to your data?
@@ -119,8 +132,9 @@ export default function DeleteAccountPage() {
           <p className="mt-3 leading-7 text-[var(--text-muted)]">
             When your account deletion request is verified and processed,
             your account and associated server-side information are deleted,
-            except for information that must be retained for legitimate
-            legal, accounting, fraud-prevention, security, or dispute reasons.
+            with limited residual records retained for up to 15 days after account
+            deletion. Records that must be kept longer to meet a legal
+            obligation are retained only for the legally required period.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -162,9 +176,10 @@ export default function DeleteAccountPage() {
               no longer want them.
             </li>
             <li>
-              Limited transaction and technical records may be retained
-              where required for legal compliance, security, fraud
-              prevention, or dispute resolution.
+              Limited transaction and technical records may be retained for up to
+              15 days after account deletion. Where a legal obligation requires
+              longer retention, only the required records are kept for that
+              period.
             </li>
           </ul>
         </section>
