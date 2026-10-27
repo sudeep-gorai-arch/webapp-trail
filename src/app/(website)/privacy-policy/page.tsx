@@ -1,6 +1,6 @@
 import Navbar from "@/components/website/Navbar";
 
-const LAST_UPDATED = "July 27, 2026";
+const LAST_UPDATED = "October 27, 2026";
 const SUPPORT_EMAIL = "support.flexiwalls@gmail.com";
 const APP_NAME = "FlexiWalls";
 const PACKAGE_NAME = "com.flexiwalls.app";
@@ -205,7 +205,7 @@ const sections: PolicySection[] = [
       },
       {
         label: "Purchase records:",
-        text: "Transaction and entitlement records may be retained for accounting, tax, refunds, disputes, chargebacks, fraud prevention, and compliance for as long as required or reasonably necessary.",
+        text: "Transaction and entitlement records may be retained for accounting, tax, refunds, disputes, chargebacks, fraud prevention, and compliance. Following account deletion, limited residual records are retained for up to 15 days, unless a longer period is required by law.",
       },
     ],
   },
@@ -213,6 +213,8 @@ const sections: PolicySection[] = [
     id: "deletion",
     title: "9. Account and data deletion",
     paragraphs: [
+      "We process emailed deletion requests within 3 days of receipt. Account ownership must be verified before personal data is deleted.",
+      "After account deletion, limited residual records are retained for up to 15 days and then deleted. Records that must be kept longer to meet a legal obligation are retained only for the legally required period.",
       "To delete your account in the app, open Settings and select \"Delete Account and Data.\" This sends a deletion request to the FlexiWalls service and removes the account and associated server-side data that is not required to be retained by law or for legitimate security, fraud-prevention, transaction, or dispute purposes.",
       "You may also request account or data deletion by emailing support.flexiwalls@gmail.com with the subject \"FlexiWalls Account Deletion Request.\" Include the email address associated with your FlexiWalls account. We may ask you to verify account ownership before completing the request.",
       "Deleting your FlexiWalls account does not automatically remove wallpaper files already saved on your device and does not automatically cancel a Google Play subscription. Remove downloaded files from the app or gallery and manage subscriptions through Google Play.",
